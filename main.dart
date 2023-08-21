@@ -1,51 +1,79 @@
 import 'package:flutter/material.dart';
-import "package:onboarding_flow/ui/screens/walk_screen.dart";
-import 'package:onboarding_flow/ui/screens/root_screen.dart';
-import 'package:onboarding_flow/ui/screens/sign_in_screen.dart';
-import 'package:onboarding_flow/ui/screens/sign_up_screen.dart';
-import 'package:onboarding_flow/ui/screens/main_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:charts_flutter/flutter.dart' as charts;
+import 'dart:math';
 
-void main() {
-  Firestore.instance.settings(timestampsInSnapshotsEnabled: true);
-  SharedPreferences.getInstance().then((prefs) {
-    runApp(MyApp(prefs: prefs));
-  });
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  final SharedPreferences prefs;
-  MyApp({this.prefs});
-
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      routes: <String, WidgetBuilder>{
-        '/walkthrough': (BuildContext context) => new WalkthroughScreen(),
-        '/root': (BuildContext context) => new RootScreen(),
-        '/signin': (BuildContext context) => new SignInScreen(),
-        '/signup': (BuildContext context) => new SignUpScreen(),
-        '/main': (BuildContext context) => new MainScreen(),
-        //'/empmain': (BuildContext context) => new EmployerMainScreen()
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: GaugeChart.withSampleData());
+  }
+}
 
-      },
-      theme: ThemeData(
-        primaryColor: Colors.white,
-        primarySwatch: Colors.grey,
-      ),
-      home: _handleCurrentScreen(),
+class GaugeChart extends StatelessWidget {
+  final List<charts.Series> seriesList;
+  final bool animate;
+
+  GaugeChart(this.seriesList, {this.animate});
+
+  /// Creates a [PieChart] with sample data and no transition.
+  factory GaugeChart.withSampleData() {
+    return new GaugeChart(
+      _createSampleData(),
+      // Disable animations for image tests.
+      animate: true,
     );
   }
 
-  Widget _handleCurrentScreen() {
-    bool seen = (prefs.getBool('seen') ?? false);
-    if (seen) {
-      return new RootScreen();
-    } else {
-      return new WalkthroughScreen(prefs: prefs);
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 120,
+      height: 120,
+      child: Stack(children: [
+        new charts.PieChart(seriesList,
+            animate: animate,
+            // Configure the width of the pie slices to 30px. The remaining space in
+            // the chart will be left as a hole in the center. Adjust the start
+            // angle and the arc length of the pie so it resembles a gauge.
+            defaultRenderer: new charts.ArcRendererConfig(
+                arcWidth: 30, startAngle: 4 / 5 * pi, arcLength: 7 / 5 * pi)),
+        Center(
+          child: Text('hello'),
+        )
+      ]),
+    );
   }
+
+  /// Create one series with sample hard coded data.
+  static List<charts.Series<GaugeSegment, String>> _createSampleData() {
+    final data = [
+      new GaugeSegment('Low', 1),
+      new GaugeSegment('Acceptable', 1),
+    ];
+
+    return [
+      new charts.Series<GaugeSegment, String>(
+        id: 'Segments',
+        domainFn: (GaugeSegment segment, _) => segment.segment,
+        measureFn: (GaugeSegment segment, _) => segment.size,
+        data: data,
+      )
+    ];
+  }
+}
+
+/// Sample data type.
+class GaugeSegment {
+  final String segment;
+  final int size;
+
+  GaugeSegment(this.segment, this.size);
 }
